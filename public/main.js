@@ -137,4 +137,4 @@ async function load(){
   document.querySelectorAll('[data-scenario]').forEach(btn=>btn.addEventListener('click',()=>{answers={...examples[btn.dataset.scenario]};step=0;edit();document.querySelector('.workspace').scrollIntoView({behavior:'smooth'});}));
   render();
 }
-load().catch(err=>{ $('panel-title').textContent='No se puede iniciar el sistema';$('question-help').textContent=err.message+' Abre la página mediante «py app.py», no directamente desde un archivo HTML.';});
+load().catch(err=>{ $('panel-title').textContent='No se puede iniciar el sistema';$('question-help').textContent=err.message+' Abre la aplicación mediante «npm start» o «npm run dev», no directamente desde un archivo HTML.';});
