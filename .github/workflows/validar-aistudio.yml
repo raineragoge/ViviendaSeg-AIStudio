@@ -1,0 +1,99 @@
+name: Validar ViviendaSeg (AI Studio)
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  verificar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Obtener código
+        uses: actions/checkout@v4
+
+      - name: Instalar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Instalar Python para validar motores académicos
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Verificar instalación reproducible
+        run: npm ci --ignore-scripts
+
+      - name: Verificar sintaxis de servidor
+        run: node --check server.js
+
+      - name: Pruebas del motor JavaScript
+        run: npm test
+
+      - name: Pruebas del motor Python (referencia)
+        run: npm run test:python
+
+      - name: Comparar Python y JavaScript
+        run: npm run test:parity
+
+      - name: Verificar generación de conocimiento
+        run: python scripts/sync_knowledge.py --check
+
+      - name: Probar servidor HTTP con el puerto de Cloud Run
+        shell: bash
+        run: |
+          set -euo pipefail
+          PORT=8080 npm start > /tmp/viviendaseg-server.log 2>&1 &
+          SERVER_PID=$!
+          trap 'kill "$SERVER_PID" 2>/dev/null || true' EXIT
+          for i in {1..30}; do
+            if curl --fail --silent "http://127.0.0.1:8080/api/schema" > /tmp/viviendaseg-schema.json; then
+              break
+            fi
+            sleep 1
+          done
+          python - <<'PY'
+          import json
+          import urllib.request
+
+          base = "http://127.0.0.1:8080"
+          with urllib.request.urlopen(base + "/") as response:
+              assert response.status == 200
+              assert b"ViviendaSeg" in response.read()
+
+          with urllib.request.urlopen(base + "/api/schema") as response:
+              schema = json.load(response)
+          assert len(schema["questions"]) == 19
+
+          base_case = {
+              "uso": "habitual", "anio": 2018, "estructura": "hormigon",
+              "electricidad": "revisada", "calefaccion": "electrica",
+              "detectores": "si", "humedades": "no", "agua": "no",
+              "estructura_estado": "bien", "conservacion": "bueno",
+              "desocupacion": "no", "seguridad": "ambas", "inundaciones": "no",
+          }
+          for status, value, expected, provisional in [
+              ("bajo", "revisada", "bajo", False),
+              ("medio", "sin_revision", "medio", False),
+              ("alto", "defectuosa", "alto", False),
+              ("provisional", "unknown", "medio", True),
+          ]:
+              payload = dict(base_case, electricidad=value)
+              request = urllib.request.Request(
+                  base + "/api/evaluate",
+                  data=json.dumps(payload).encode("utf-8"),
+                  headers={"Content-Type": "application/json"},
+                  method="POST",
+              )
+              with urllib.request.urlopen(request) as response:
+                  result = json.load(response)
+              assert (result["level"], result["provisional"]) == (expected, provisional), (status, result)
+              print(status, result["level"], result["provisional"])
+          PY
