@@ -1,0 +1,8 @@
+{
+  "name": "ViviendaSeg · Sistema experto",
+  "description": "Prototipo académico de sistema experto para la evaluación orientativa de riesgos de viviendas mediante reglas jerárquicas.",
+  "permissions": [],
+  "capabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
