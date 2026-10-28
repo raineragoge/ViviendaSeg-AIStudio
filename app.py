@@ -1,6 +1,5 @@
 """Servidor web sin dependencias de terceros. Ejecutar: py app.py"""
 import json
-import os
 from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
 from pathlib import Path
 from urllib.parse import urlsplit
@@ -22,20 +21,7 @@ class Handler(BaseHTTPRequestHandler):
         self.send_header('Content-Length',str(len(content)))
         self.send_header('Cache-Control','no-store')
         self.send_header('X-Content-Type-Options','nosniff')
-        allowed_ancestors = os.environ.get(
-            'FRAME_ANCESTORS',
-            "'self' https://*.google.com https://*.googleusercontent.com https://*.run.app"
-        )
-        csp = (
-            "default-src 'self'; "
-            "style-src 'self' 'unsafe-inline'; "
-            "script-src 'self'; "
-            "img-src 'self' data:; "
-            "connect-src 'self'; "
-            "base-uri 'none'; "
-            f"frame-ancestors {allowed_ancestors}"
-        )
-        self.send_header('Content-Security-Policy', csp)
+        self.send_header('Content-Security-Policy',"default-src 'self'; style-src 'self'; script-src 'self'; connect-src 'self'; base-uri 'none'; frame-ancestors 'none'")
         self.end_headers()
         self.wfile.write(content)
 
@@ -64,13 +50,11 @@ class Handler(BaseHTTPRequestHandler):
 
 if __name__ == '__main__':
     import argparse
-    import os
     arg=argparse.ArgumentParser()
-    arg.add_argument('--port',type=int,default=int(os.environ.get('PORT', 3000)))
-    arg.add_argument('--host',type=str,default='0.0.0.0')
+    arg.add_argument('--port',type=int,default=8000)
     args=arg.parse_args()
-    server=ThreadingHTTPServer((args.host,args.port),Handler)
-    print(f'Abre http://{args.host}:{args.port} en tu navegador. Ctrl+C para salir.')
+    server=ThreadingHTTPServer(('127.0.0.1',args.port),Handler)
+    print(f'Abre http://127.0.0.1:{args.port} en tu navegador. Ctrl+C para salir.')
     try: server.serve_forever()
     except KeyboardInterrupt: print('\nServidor detenido')
     finally: server.server_close()
