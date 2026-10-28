@@ -5,9 +5,13 @@
   "type": "module",
   "description": "Sistema experto académico de evaluación orientativa de riesgos de viviendas",
   "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js --port 3000",
     "test": "node --test tests/test_cloudflare.mjs",
-    "test:parity": "python scripts/test_parity.py",
-    "dev": "npx wrangler pages dev public",
-    "deploy": "npx wrangler pages deploy public"
+    "test:python": "python tests/test_engine.py",
+    "test:parity": "python scripts/test_parity.py"
+  },
+  "engines": {
+    "node": ">=20"
   }
 }
